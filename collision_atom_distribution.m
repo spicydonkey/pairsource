@@ -11,7 +11,9 @@
 %%% DATA
 % data_path = 'C:\Users\David\data\2020_revisit\kspace_hotspot_filt\out\collate_collate_config_20200603_165608.mat';
 % data_path = 'C:\Users\David\data\bell_momentumspin\pairsource\90\rev\run_1_rev.mat';
+% data_path = '/home/david/Documents/collision/preproc_data/run_1_rev.mat';
 % b_flip_mJ = true;
+
 
 % data structure contextual
 idx_parT_anal = 1;        % FOR BELL YROT: 1 = pi/2; 2 = source
@@ -183,10 +185,10 @@ n_azel_se = cellfun(@(x) sqrt(x)/sqrt(n_shot),n_azel,'uni',0);
 % averages in azim/polar axes
 % TODO -- what is the statistical uncertainty from model
 n_az_avg = cellfun(@(x) mean(x,2,'omitnan'),n_azel,'uni',0);
-n_az_std = cellfun(@(x) std(x,[],2,'omitnan'),n_azel,'uni',0);
+n_az_std = cellfun(@(x) std(x,1,2,'omitnan'),n_azel,'uni',0);
 
 n_el_avg = cellfun(@(x) mean(x,1,'omitnan'),n_azel,'uni',0);
-n_el_std = cellfun(@(x) std(x,[],1,'omitnan'),n_azel,'uni',0);
+n_el_std = cellfun(@(x) std(x,1,1,'omitnan'),n_azel,'uni',0);
 
 
 
@@ -451,8 +453,8 @@ end
 kzone.p_nk = cellfun(@(x) x./sum(x,3),kzone.n_nk,'uni',0);
 
 % statistics
-kzone.p_nk_avg = cellfun(@(x) squeeze(mean(x,[1,2])),kzone.p_nk,'uni',0);
-kzone.p_nk_se = cellfun(@(x) squeeze(std(x,[],[1,2]))./sqrt(kzone.n_zone),kzone.p_nk,'uni',0);
+kzone.p_nk_avg = cellfun(@(x) squeeze(mean(x,1)),kzone.p_nk,'uni',0);
+kzone.p_nk_se = cellfun(@(x) squeeze(std(x,1,1))./sqrt(kzone.n_zone),kzone.p_nk,'uni',0);
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -637,7 +639,7 @@ corr.g2_err = cell(2);
 corr.g2_bs_mean = cell(2);
 corr.g2_bs = cell(2);           % find fit amp error by BS
 for ii = 1:2
-    for jj = 1:2
+    for jj = ii:2               % exploit symmetry g2(ii,jj) == g2(jj,ii)
         tK = packrows(K(:,unique([ii,jj])));            % pack to group mJ types
         corr.g2{ii,jj} = fun_g2(tK);                    % super simple!
         [corr.g2_err{ii,jj},corr.g2_bs_mean{ii,jj},corr.g2_bs{ii,jj}] = bootstrap(bs.nboot_g2,fun_g2,tK,bs.frac_g2);
@@ -655,20 +657,22 @@ sigk0 = 0.03;
 par0_cl = [1,sigk0];
 
 % fit
+corr.th_fit = linspace(0,pi,1e4);
 corr.g2_mdl = cell(2);
 for ii = 1:2
-    for jj = 1:2
+    for jj = ii:2               % exploit symmetry
         if ii == jj
             corr.g2_mdl{ii,jj} = fitnlm(corr.th_ct,corr.g2{ii,jj},fun_g2_cl,par0_cl);
         else
             tp0 = [corr.g2{ii,jj}(end),sigk0];
             corr.g2_mdl{ii,jj} = fitnlm(corr.th_ct,corr.g2{ii,jj},fun_g2_bb,tp0);
         end
+        % evaluate fit
+        corr.g2_fit{ii,jj} = feval(corr.g2_mdl{ii,jj},corr.th_fit);     
     end
 end
-% evaluate fit
-corr.th_fit = linspace(0,pi,1e4);
-corr.g2_fit = cellfun(@(m) feval(m,corr.th_fit),corr.g2_mdl,'uni',0);
+
+
 
 %%% get g2_BB params
 % NOTE: fit error from all is ~0.1 of BS error
@@ -696,7 +700,7 @@ hold on;
 p_g2 = gobjects(2,2,2);
 p_fit = gobjects(2,2);
 for ii = 1:2
-    for jj = 1:2
+    for jj = ii:2       % symmetry
         % data and fit
         p_g2(ii,jj,:) = ploterr(corr.th_ct,corr.g2{ii,jj},[],corr.g2_err{ii,jj},[col_g2{ii,jj},'.']);
         p_fit(ii,jj) = plot(corr.th_fit,corr.g2_fit{ii,jj},col_g2{ii,jj});
@@ -713,9 +717,6 @@ xlim([0,pi]);
 box on;
 [~,data_name]=fileparts(data_path);
 title(data_name,'Interpreter','none');
-
-set(p_g2(2,1,:),'Visible','off');
-set(p_fit(2,1),'Visible','off');
 
 lgd = legend([p_g2(1,1),p_g2(2,2),p_g2(1,2)],'Location','best');
 

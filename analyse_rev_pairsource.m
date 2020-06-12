@@ -17,8 +17,11 @@ data_fname = {'run_1_rev.mat',...
     'run_6_rev.mat',...
     'run_9_rev.mat',...
     'run_10_rev.mat'};
-path_dir = 'C:\Users\David\data\bell_momentumspin\pairsource\90\rev\';
-path_main = 'C:\Users\David\Dropbox\PhD\diagrams\data_analysis\k_space\full_analysis';
+% path_dir = 'C:\Users\David\data\bell_momentumspin\pairsource\90\rev\';
+path_dir = '/home/david/Documents/collision/preproc_data';
+% path_main = 'C:\Users\David\Dropbox\PhD\diagrams\data_analysis\k_space\full_analysis';
+path_main = '/home/david/Documents/collision/pairsrc_out';
+
 
 b_flip_mJ = true;       % flips mJ indices to mJ = 0,1 (default 1,0,-1)
 

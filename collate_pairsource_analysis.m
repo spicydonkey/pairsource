@@ -20,7 +20,8 @@
 
 
 %% Configure
-path_data   = 'C:\Users\David\Dropbox\PhD\diagrams\data_analysis\k_space\full_analysis\20200612';
+% path_data   = 'C:\Users\David\Dropbox\PhD\diagrams\data_analysis\k_space\full_analysis\20200612';
+path_data   = '/home/david/Documents/collision';
 file_head   = 'anal_run';
 
 
