@@ -34,7 +34,7 @@ for ii = 1:numel(data_fname)
     close all;
     
     % run g2 analysis
-    run('collision_atom_distribution.m');    
+    run('characterise_pairsource.m');    
 end
 close all;
 
