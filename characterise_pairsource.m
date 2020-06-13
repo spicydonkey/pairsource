@@ -42,7 +42,7 @@ corr.nbin_th = 5e2;
 
 %%% STAT
 bs.nboot = 100;
-bs.nboot_g2 = 25;
+bs.nboot_g2 = 100;
 bs.frac_g2 = 0.5;
 
 
@@ -268,7 +268,7 @@ hemi.nk_std = std(hemi.nk);
 % histogram
 fun_countpdf = @(x) histcounts(x,hemi.n_ed,'Normalization','pdf');
 hemi.p_nk = arrayfun(@(I) fun_countpdf(hemi.nk(:,I)),[1,2],'uni',0);
-hemi.p_nk_err = arrayfun(@(I) bootstrap(bs.nboot,fun_countpdf,hemi.nk(:,I)),...
+[hemi.p_nk_err,~,hemi.p_nk_bs] = arrayfun(@(I) bootstrap(bs.nboot,fun_countpdf,hemi.nk(:,I)),...
     [1,2],'uni',0);
 
 
@@ -526,7 +526,7 @@ zone.N = arrayfun(@(I) cellfun(@(x) sum(x,2),zone.Nm{I},'uni',0),1:2,'uni',0);
 % Evaluate normalised variance of number difference.
 zone.varnorm = NaN(n_azel_zone);
 zone.varnorm_err = NaN(n_azel_zone);
-zone.varnorm_bs_mean = NaN(n_azel_zone);
+zone.varnorm_bs = cell(n_azel_zone);
 for ii = 1:n_azel_zone
     for jj = 1:n_azel_zone
         tN = packrows([zone.N{1}{ii}, zone.N{2}{jj}]);
@@ -534,7 +534,7 @@ for ii = 1:n_azel_zone
         % All data
         zone.varnorm(ii,jj) = normDiffVar(tN);
         % Bootstrap to find error of NDV.
-        [zone.varnorm_err(ii,jj),zone.varnorm_bs_mean(ii,jj)] = bootstrap(bs.nboot,@normDiffVar,tN);
+        [zone.varnorm_err(ii,jj),~,zone.varnorm_bs{ii,jj}] = bootstrap(bs.nboot,@normDiffVar,tN);
     end
 end
 
@@ -636,13 +636,12 @@ fun_g2 = @(x) angular_g2(x,corr.th_ed);     % Functionalised for bootstrap
 
 corr.g2 = cell(2);
 corr.g2_err = cell(2);
-corr.g2_bs_mean = cell(2);
 corr.g2_bs = cell(2);           % find fit amp error by BS
 for ii = 1:2
     for jj = ii:2               % exploit symmetry g2(ii,jj) == g2(jj,ii)
         tK = packrows(K(:,unique([ii,jj])));            % pack to group mJ types
         corr.g2{ii,jj} = fun_g2(tK);                    % super simple!
-        [corr.g2_err{ii,jj},corr.g2_bs_mean{ii,jj},corr.g2_bs{ii,jj}] = bootstrap(bs.nboot_g2,fun_g2,tK,bs.frac_g2);
+        [corr.g2_err{ii,jj},~,corr.g2_bs{ii,jj}] = bootstrap(bs.nboot_g2,fun_g2,tK,bs.frac_g2);
     end
 end
 
@@ -792,17 +791,7 @@ x_avg = mean(x,1);
 v = var(dx)/sum(x_avg);
 end
 
-
 %%% g2
-function g2 = angular_g2(K,th_ed)
-K = unpackrows(K);
-[N_dth_corr,N_dth_all] = pairAngCount(K,th_ed,1);
-% normalise
-nn_dth_corr = N_dth_corr./sumall(N_dth_corr);
-nn_dth_all = N_dth_all./sumall(N_dth_all);
-g2 = nn_dth_corr./nn_dth_all;
-end
-
 function [amp,sig,amp_se,sig_se] = get_g2bb_fitparams(mdl)
     amp = mdl.Coefficients.Estimate(1);
     sig = mdl.Coefficients.Estimate(2);
