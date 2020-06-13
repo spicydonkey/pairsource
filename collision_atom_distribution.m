@@ -43,7 +43,7 @@ corr.nbin_th = 5e2;
 %%% STAT
 bs.nboot = 100;
 bs.nboot_g2 = 25;
-bs.frac_g2 = 0.2;
+bs.frac_g2 = 0.5;
 
 
 %%% params
