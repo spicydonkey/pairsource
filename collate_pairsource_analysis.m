@@ -18,10 +18,14 @@
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+clear all;
+close all;
 
 %% Configure
 % path_data   = 'C:\Users\David\Dropbox\PhD\diagrams\data_analysis\k_space\full_analysis\20200612';
-path_data   = '/home/david/Documents/collision';
+path_data   = '/home/david/Documents/collision/pairsrc_out';
+
+
 file_head   = 'anal_run';
 
 
