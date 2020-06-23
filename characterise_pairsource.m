@@ -10,6 +10,7 @@
 %% config
 %%% DATA
 % data_path = 'C:\Users\David\data\2020_revisit\kspace_hotspot_filt\out\collate_collate_config_20200603_165608.mat';
+data_path = 'C:\Users\David\Dropbox\PhD\projects\pairsource_revisited_2020\collision_preproc_data\collate_collate_config_20200603_165608.mat';
 % data_path = 'C:\Users\David\data\bell_momentumspin\pairsource\90\rev\run_1_rev.mat';
 % data_path = '/home/david/Documents/collision/preproc_data/run_1_rev.mat';
 % b_flip_mJ = true;
@@ -41,9 +42,9 @@ corr.nbin_th = 5e2;
 
 
 %%% STAT
-bs.nboot = 100;
-bs.nboot_g2 = 100;
-bs.frac_g2 = 0.5;
+bs.nboot = 10;  %100;
+bs.nboot_g2 = 3;    %100;
+bs.frac_g2 = 0.1;   %0.5;
 
 
 %%% params
@@ -53,10 +54,14 @@ det_qe = 0.1;
 
 %%% Graphics and annotation
 col_mJ = {'b','r'};
-str_mJ = {'$1\quad|\!\uparrow\rangle$','$0\quad|\!\downarrow\rangle$'};
+col_mJ_full = {'blue','red'};
+str_mJ_spin = {'$1\quad|\!\uparrow\rangle$','$0\quad|\!\downarrow\rangle$'};
+str_mJ = {'$m_J = 1$','$m_J = 0$'};
+str_spin = {'$|\!\uparrow\rangle$','$|\!\downarrow\rangle$'};
 mark_mJ = {'^','v'};
 str_g2 = {'$\uparrow\uparrow$','$\uparrow\downarrow$';'$\downarrow\uparrow$','$\downarrow\downarrow$'};
 col_g2 = {'b','k';'k','r'};
+
 
 % check mJ indexing
 if ~exist('b_flip_mJ','var')
@@ -64,7 +69,10 @@ if ~exist('b_flip_mJ','var')
 end
 if b_flip_mJ
     col_mJ = fliplr(col_mJ);
+    col_mJ_full = fliplr(col_mJ_full);
+    str_mJ_spin = fliplr(str_mJ_spin);
     str_mJ = fliplr(str_mJ);
+    str_spin = fliplr(str_spin);
     mark_mJ = fliplr(mark_mJ);
     str_g2 = fliplr(flipud(str_g2));
     col_g2 = fliplr(flipud(col_g2));
@@ -104,6 +112,14 @@ fun_nr = @(x) rdist_truncsph(vertcat(x{:}),r_ed,z_trunc)/numel(x);
 
 n_r = arrayfun(@(I) fun_nr(k_norm(:,I)),1:2,'uni',0);
 [n_r_err,~,n_r_bs] = arrayfun(@(I) bootstrap(bs.nboot,fun_nr,k_norm(:,I)),1:2,'uni',0);
+if isfield(S.configs,'filt2')
+    r_crop = S.configs(idx_parT_anal).filt2.r_crop;
+    b_rfilt = r_cent > r_crop(1) & r_cent < r_crop(2);
+    for ii = 1:2
+        n_r{ii}(~b_rfilt) = NaN;
+    end
+end
+
 
 %%% FIT radial dist
 kdist_fit = cell(1,2);
@@ -114,10 +130,12 @@ k_width_fiterr = NaN(1,2);
 k_width_bs = cell(1,2);
 k_width_staterr = NaN(1,2);
 
-p_const = cell(1,4);        % all params unconstrained
+% p_const = cell(1,4);        % all params unconstrained
+p_const = {[],[],[],0};     % constraint offset to 0
 for ii = 1:2
     ty = n_r{ii};
-    p0 = [max(ty),1,0.03,1];
+%     p0 = [max(ty),1,0.03,0];      % unconstrained
+    p0 = [max(ty),1,0.03];      % offset-constrained
     [~,kdist_fit{ii},kdist_mdl{ii}] = fit_gauss_1d(r_cent,ty,p0,p_const,0);
     
     % get halo width
@@ -131,7 +149,7 @@ k_width_err = quadsum(k_width_staterr,k_width_fiterr);
 
 
 %% PLOT radial distribution
-h_rdist = figure('name','rdist');
+h_rdist = figure('name','rdist','Units','centimeters','Position',[0 0 11 9.5]);
 hold on;
 
 % p_rdist = gobjects(1,2);
@@ -139,18 +157,18 @@ p_rdist = gobjects(2,2);
 p_rdist_fit = gobjects(1,2);
 for ii = 1:2
     p_rdist(ii,:) = ploterr(r_cent,n_r{ii},[],n_r_err{ii},col_mJ{ii});
-    set(p_rdist(ii,1),{'LineStyle','Marker','MarkerFaceColor','DisplayName'},{'none','.','w',str_mJ{ii}});
+    set(p_rdist(ii,1),{'LineStyle','Marker','MarkerFaceColor','DisplayName'},{'none','.','w',str_mJ_spin{ii}});
     
     % fit
     p_rdist_fit(ii) = plot(kdist_fit{ii}.x,kdist_fit{ii}.y,col_mJ{ii});
     uistack(p_rdist_fit(ii),'bottom');
 end
 xlabel('momentum k');
-ylabel('count density (arb. u.)');
+ylabel('count density (per unit volume)');
 
 ax=gca;
 ax.Layer = 'top';
-grid on;
+% grid on;
 
 lgd = legend([p_rdist([1,2])]);
 lgd.Title.String = '$m_J$';
@@ -192,63 +210,78 @@ n_el_std = cellfun(@(x) std(x,1,1,'omitnan'),n_azel,'uni',0);
 
 
 
-%%% PLOT - 2D AZEL dist
-h_azel = gobjects(1,2);
+%% PLOT - 2D AZEL dist
+% h_azel = gobjects(1,2);
+h_azel = figure('name','azel','Units','centimeters','Position',[0 0 26.7 5]);
 p_azel = gobjects(1,2);
+ax_azel = gobjects(1,2);
 cb = gobjects(1,2);
 for ii = 1:2
-    h_azel(ii) = figure('name',['azel_',num2str(ii)]);
-    p_azel(ii) = imagesc(az_c,el_c,n_azel{ii}');
+    subplot(1,2,ii);
+%     h_azel(ii) = figure('name',['azel_',num2str(ii)]);
+    p_azel(ii) = imagesc(az_c/pi,el_c/pi,n_azel{ii}');
     ax = gca;
+    ax_azel(ii) = ax;
     ax.YDir = 'normal';
     
-    xlabel('$\theta$');
-    ylabel('$\phi$');
+    xlabel('$\theta/\pi$');
+    ylabel('$\phi/\pi$');
     
     cb(ii) = mycolorbar;
     cb(ii).Label.String = 'count density (sr$^{-1}$)';
     
     axis equal tight;
+    title(str_mJ{ii});
+    
+    p_azel(ii).AlphaData = ~isnan(p_azel(ii).CData);    % NaN to transparent
+    
+    colormap(ax,col_mJ_full{ii});
 end
+clim = [0, maxall(vertcat(n_azel{:}))];     % set color limit equal
+set(ax_azel,'CLim',clim);
 
 
 %% 2.1. Azimuthal distribution
 %%% PLOT
-h_azim = figure('name','azim');
+h_azim = figure('name','azim','Units','centimeters','Position',[0 0 11 5]);
 hold on;
 p_azim = cell(1,2);
 for ii = 1:2 
-    p_azim{ii} = shadedErrorBar(az_c,n_az_avg{ii},n_az_std{ii}/sqrt(n_bin_azel(2)),...
+    p_azim{ii} = shadedErrorBar(az_c/pi,n_az_avg{ii},n_az_std{ii}/sqrt(n_bin_azel(2)),...
         'lineprops',col_mJ{ii});
 end
 p_azim = cell2mat(p_azim);
 
-xlabel('azimuthal angle $\theta$');
+xlabel('azimuthal angle $\theta/\pi$');
 ylabel('count density (sr$^{-1}$)');
 
 ax=gca;
-xlim(pi*[-1,1]);
+% xlim(pi*[-1,1]);
+xlim([-1,1]);
 ax.YLim(1) = 0;
+box on;
 
 
 %% 2.2. Polar distribution
 %%% PLOT
-h_elev = figure('name','elev');
+h_elev = figure('name','elev','Units','centimeters','Position',[0 0 11 5]);
 hold on;
 p_elev = cell(1,2);
 for ii = 1:2 
 %     p_elev(ii) = plot(vel,nk_azel{ii}(idx_az_plot,:));
 %     p_elev(ii) = plot(el_c,n_azel{ii}(idx_az_plot,:));
-    p_elev{ii} = shadedErrorBar(el_c,n_el_avg{ii},n_el_std{ii}/sqrt(n_bin_azel(1)),'lineprops',col_mJ{ii});
+    p_elev{ii} = shadedErrorBar(el_c/pi,n_el_avg{ii},n_el_std{ii}/sqrt(n_bin_azel(1)),'lineprops',col_mJ{ii});
 end
 p_elev = cell2mat(p_elev);
 
-xlabel('elevation angle $\phi$');
+xlabel('elevation angle $\phi/\pi$');
 ylabel('count density (sr$^{-1}$)');
 
 ax = gca;
 ax.YLim(1) = 0;
-xlim(0.5*pi*[-1,1]);
+% xlim(0.5*pi*[-1,1]);
+xlim(0.5*[-1,1]);
+box on;
 
 
 %% 3. number statistics -- halo-hemisphere integrated
@@ -288,7 +321,7 @@ p_nstat = gobjects(2,2);
 for ii = 1:2
     p_nstat(ii,:) = ploterr(hemi.n_ct,hemi.p_nk{ii},[],hemi.p_nk_err{ii},col_mJ{ii});
     set(p_nstat(ii,1),{'Marker','LineStyle','DisplayName'},...        
-        {'.','none',str_mJ{ii}});
+        {'.','none',str_mJ_spin{ii}});
 end
 
 % annotate
@@ -466,7 +499,7 @@ p_kloc = cell(1,2);
 for ii = 1:2
     p_kloc{ii} = ploterr(kzone.n_ct',kzone.p_nk_avg{ii},[],kzone.p_nk_se{ii},...
         [col_mJ{ii},'o']);
-    set(p_kloc{ii}(1),{'MarkerFaceColor','DisplayName'},{'w',str_mJ{ii}});
+    set(p_kloc{ii}(1),{'MarkerFaceColor','DisplayName'},{'w',str_mJ_spin{ii}});
 end
 
 ax=gca;
