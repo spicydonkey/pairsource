@@ -748,10 +748,18 @@ ylabel('$g^{(2)}$');
 xlim([0,pi]);
 box on;
 [~,data_name]=fileparts(data_path);
-title(data_name,'Interpreter','none');
+tt=title(data_name,'Interpreter','none');
 
-lgd = legend([p_g2(1,1),p_g2(2,2),p_g2(1,2)],'Location','best');
+lgd = legend([p_g2(1,1),p_g2(2,2),p_g2(1,2)]);
 
+set(ax,'FontSize',13);
+set(lgd,'FontSize',13);
+tt.Visible='off';
+
+%%% ZOOM
+% xlim([0,0.15]);           
+xlim([3,pi]);
+lgd.Location = 'best';
 
 %% 7. BEC vs scattered number
 if isfield(S,'txy')

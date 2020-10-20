@@ -125,9 +125,14 @@ box on;
 h_g2n = figure('Name','g2_mocc');
 hold on;
 
+col_data = 'k';
+col_biv = 0.8*ones(1,3);
+
+
 % data
-p_g2n = ploterr(n_mocc,g2_amp-1,n_mocc_err,g2_amp_err,'bo','hhxy',0);
-p_g2n(1).MarkerFaceColor='w';
+p_g2n = ploterr(n_mocc,g2_amp-1,n_mocc_err,g2_amp_err,'o','hhxy',0);
+p_g2n(1).MarkerFaceColor=col_data;
+set(p_g2n,'Color',col_data);
 
 ax=gca;
 ax.XScale = 'log';
@@ -136,14 +141,22 @@ ax.YScale = 'log';
 % theory
 g2n.xx = geospace_lim(ax.XLim,1e2);
 g2n.yy = 2 + 1./g2n.xx;
-g2n.p = plot(g2n.xx,g2n.yy - 2,'k-','DisplayName','theory');
+g2n.p = plot(g2n.xx,g2n.yy - 2,'-','Color',col_data,'DisplayName','theory');
 uistack(g2n.p,'bottom');
 
 xlabel('mode occupancy');
 ylabel('correlation amplitude, $g^{(2)}_{\uparrow\downarrow} - 2$');
 box on;
 
+% BIV shaded region
+g2_biv = 3 + 2*sqrt(2);
 
+y0 = ax.YLim(1);
+y1 = g2_biv-2;
+p_biv = patch([ax.XLim fliplr(ax.XLim)],[y0,y0,y1,y1],col_biv,'EdgeColor','none');
+uistack(p_biv,'bottom');
+
+ax.Layer = 'top';
 
 %% save
 out_str = ['collate_',file_head,'_',getdatetimestr];
